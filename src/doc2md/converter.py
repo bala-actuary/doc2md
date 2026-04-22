@@ -1,9 +1,30 @@
+import shutil
 from pathlib import Path
 from typing import Iterable, Optional
 
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions, TesseractCliOcrOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
+
+
+_TESSERACT_COMMON_PATHS = [
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+    "/usr/bin/tesseract",
+    "/usr/local/bin/tesseract",
+    "/opt/homebrew/bin/tesseract",
+]
+
+
+def _find_tesseract() -> Optional[str]:
+    """Locate the tesseract executable. PATH first, then common install paths."""
+    found = shutil.which("tesseract")
+    if found:
+        return found
+    for candidate in _TESSERACT_COMMON_PATHS:
+        if Path(candidate).exists():
+            return candidate
+    return None
 
 
 def convert(
@@ -27,7 +48,11 @@ def convert(
 
     if ocr_langs is not None:
         pipeline.do_ocr = True
-        pipeline.ocr_options = TesseractCliOcrOptions(lang=list(ocr_langs))
+        ocr_options = TesseractCliOcrOptions(lang=list(ocr_langs))
+        tesseract_cmd = _find_tesseract()
+        if tesseract_cmd:
+            ocr_options.tesseract_cmd = tesseract_cmd
+        pipeline.ocr_options = ocr_options
 
     converter = DocumentConverter(
         format_options={
