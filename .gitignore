@@ -11,6 +11,10 @@ venv/
 # Jupyter
 .ipynb_checkpoints/
 
+# Local working notebook (copy from explore.template.ipynb). Keeps your real
+# document paths and execution outputs out of the public repo.
+notebooks/explore.ipynb
+
 # Editors
 .vscode/
 .idea/

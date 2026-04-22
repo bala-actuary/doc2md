@@ -90,4 +90,12 @@ convert("ballot.pdf", "ballot.md", ocr_langs=["eng", "tam"])
 
 ## Exploration
 
-`notebooks/explore.ipynb` imports `convert()` and runs it on sample documents. Replace the placeholder paths with your own files and use it to tune OCR settings and inspect output before relying on the CLI.
+The committed notebook is `notebooks/explore.template.ipynb` — a scrubbed template with placeholder paths. Your actual working notebook (`notebooks/explore.ipynb`) is **gitignored** so real document paths and execution outputs never reach the public repo.
+
+First-time setup on each machine:
+
+```powershell
+Copy-Item notebooks\explore.template.ipynb notebooks\explore.ipynb
+```
+
+Then open `notebooks/explore.ipynb`, replace the placeholder paths with your own files, and iterate freely. If you improve the template itself (new cells, better defaults), edit `explore.template.ipynb` directly and commit that — not your local copy.
