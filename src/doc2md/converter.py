@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions, TesseractOcrOptions
+from docling.datamodel.pipeline_options import PdfPipelineOptions, TesseractCliOcrOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 
 
@@ -27,7 +27,7 @@ def convert(
 
     if ocr_langs is not None:
         pipeline.do_ocr = True
-        pipeline.ocr_options = TesseractOcrOptions(lang=list(ocr_langs))
+        pipeline.ocr_options = TesseractCliOcrOptions(lang=list(ocr_langs))
 
     converter = DocumentConverter(
         format_options={
