@@ -31,20 +31,25 @@ def convert(
     source: str,
     output: str,
     ocr_langs: Optional[Iterable[str]] = None,
+    extract_images: bool = False,
 ) -> Path:
     """Convert a document to Markdown.
 
-    source:    path or URL to input (PDF, DOCX, PPTX, HTML, image).
-    output:    path for the .md file. Parent dirs are created.
-    ocr_langs: e.g. ["eng"] or ["eng", "tam"]. Forces Tesseract OCR with
-               those languages. Leave as None for Docling auto-detection
-               (OCR fires only on pages that need it).
+    source:         path or URL to input (PDF, DOCX, PPTX, HTML, image).
+    output:         path for the .md file. Parent dirs are created.
+    ocr_langs:      e.g. ["eng"] or ["eng", "tam"]. Forces Tesseract OCR
+                    with those languages. Leave as None for Docling
+                    auto-detection (OCR fires only on pages that need it).
+    extract_images: if True, render embedded pictures as PNGs and reference
+                    them in the markdown. Off by default because it spikes
+                    memory use and can OOM on large (100+ page) PDFs.
     """
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     pipeline = PdfPipelineOptions()
-    pipeline.generate_picture_images = True
+    if extract_images:
+        pipeline.generate_picture_images = True
 
     if ocr_langs is not None:
         pipeline.do_ocr = True

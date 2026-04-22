@@ -23,10 +23,19 @@ def main(
             "Forces OCR; omit for Docling auto-detection."
         ),
     ),
+    images: bool = typer.Option(
+        False,
+        "--images",
+        help=(
+            "Extract embedded pictures as PNGs and reference them in the "
+            "markdown. Off by default — image extraction spikes memory use "
+            "and can OOM on large (100+ page) PDFs."
+        ),
+    ),
 ) -> None:
     """Convert SOURCE to Markdown at OUTPUT."""
     langs = [lang.strip() for lang in ocr.split(",")] if ocr else None
-    result_path = convert(source, str(output), ocr_langs=langs)
+    result_path = convert(source, str(output), ocr_langs=langs, extract_images=images)
     typer.echo(f"Wrote {result_path}")
 
 
