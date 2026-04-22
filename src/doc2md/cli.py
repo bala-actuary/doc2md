@@ -1,0 +1,34 @@
+from pathlib import Path
+from typing import Optional
+
+import typer
+
+from .converter import convert
+
+app = typer.Typer(
+    add_completion=False,
+    help="Convert documents (PDF, DOCX, PPTX, HTML, images) to Markdown.",
+)
+
+
+@app.command()
+def main(
+    source: str = typer.Argument(..., help="Input file path or URL."),
+    output: Path = typer.Argument(..., help="Output .md file path."),
+    ocr: Optional[str] = typer.Option(
+        None,
+        "--ocr",
+        help=(
+            "Comma-separated Tesseract language codes (e.g. 'eng' or 'eng,tam'). "
+            "Forces OCR; omit for Docling auto-detection."
+        ),
+    ),
+) -> None:
+    """Convert SOURCE to Markdown at OUTPUT."""
+    langs = [lang.strip() for lang in ocr.split(",")] if ocr else None
+    result_path = convert(source, str(output), ocr_langs=langs)
+    typer.echo(f"Wrote {result_path}")
+
+
+if __name__ == "__main__":
+    app()
