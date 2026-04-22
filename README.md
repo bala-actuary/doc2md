@@ -70,8 +70,11 @@ Then `from doc2md import convert` works inside that project.
 
 ```bash
 doc2md input.pdf output.md
-doc2md scan.pdf output.md --ocr eng            # force OCR, English
-doc2md ballot.pdf ballot.md --ocr eng,tam      # English + Tamil
+doc2md scan.pdf output.md --ocr eng                    # force OCR, English
+doc2md ballot.pdf ballot.md --ocr eng,tam              # English + Tamil
+doc2md spec.pdf spec.md --images                       # keep diagrams (higher RAM)
+doc2md big.pdf big.md --chunk-size 50                  # auto-chunk 50 pages at a time
+doc2md big.pdf part.md --pages 101-150                 # convert only pages 101-150
 ```
 
 ## Library
@@ -81,6 +84,25 @@ from doc2md import convert
 
 convert("input.pdf", "output.md")
 convert("ballot.pdf", "ballot.md", ocr_langs=["eng", "tam"])
+convert("spec.pdf", "spec.md", extract_images=True)
+convert("big.pdf", "big.md", chunk_size=50)            # auto-chunk
+convert("big.pdf", "part.md", page_range=(101, 150))   # explicit range
+```
+
+## Handling large PDFs (chunking)
+
+Docling loads layout/table models and renders every page to a bitmap in memory. On 100+ page PDFs this routinely OOMs with `std::bad_alloc`. `doc2md` addresses this with `--chunk-size`:
+
+- Splits the PDF into page-range chunks (no physical file splitting — uses Docling's native `page_range`).
+- Runs each chunk in a **fresh Python subprocess** so the OS reclaims Docling/PyTorch memory between chunks.
+- Concatenates the chunk markdown into a single output file, separated by `---` horizontal rules.
+
+Trade-off: each subprocess re-loads Docling's ML models (~30 seconds of overhead per chunk). For a 200-page doc split into 4 chunks of 50, expect ~2 minutes of extra load time versus a hypothetical non-chunked run — well worth it, because the non-chunked run fails.
+
+If a specific chunk fails, retry just that range with `--pages`:
+
+```bash
+doc2md big.pdf retry.md --pages 51-100
 ```
 
 ## OCR behaviour
