@@ -9,7 +9,10 @@ Convert PDFs, Word docs, PowerPoints, HTML, and images to Markdown. Thin wrapper
 - **Tesseract OCR** — *only* required if you pass `ocr_langs` to force OCR on scanned PDFs. Skip this if your documents are text PDFs (most modern Word/LaTeX exports are).
   - Windows installer: https://github.com/UB-Mannheim/tesseract/wiki
   - During install, tick the language packs you need (e.g. `English`, `Tamil`).
-  - After install, make sure `tesseract.exe` is on your PATH (the installer offers this option).
+  - `doc2md` auto-finds `tesseract.exe` in the standard install location, so PATH setup is not required.
+- **LibreOffice** — *only* required when converting DOCX files that contain native Word charts/diagrams (DrawingML) and you want them rendered as images via `--images`. Pasted bitmap images extract without it.
+  - Windows: `winget install TheDocumentFoundation.LibreOffice` (~700 MB).
+  - `doc2md` auto-finds `soffice.exe` in the standard install location, so PATH setup is not required.
 - **~5 GB free disk space** for Docling's ML model downloads on first run (PyTorch, transformers, layout models).
 
 ## Get the code
@@ -70,6 +73,8 @@ Then `from doc2md import convert` works inside that project.
 
 ```bash
 doc2md input.pdf output.md
+doc2md report.docx report.md                           # Word doc → Markdown
+doc2md report.docx report.md --images                  # …with charts/tables as PNG sidecar
 doc2md scan.pdf output.md --ocr eng                    # force OCR, English
 doc2md ballot.pdf ballot.md --ocr eng,tam              # English + Tamil
 doc2md spec.pdf spec.md --images                       # keep diagrams (higher RAM)
@@ -77,12 +82,15 @@ doc2md big.pdf big.md --chunk-size 50                  # auto-chunk 50 pages at 
 doc2md big.pdf part.md --pages 101-150                 # convert only pages 101-150
 ```
 
+With `--images`, extracted PNGs go to a sibling folder named `<output_stem>_images/` and the markdown references them with relative paths — copy/move the `.md` and the folder together to keep links intact.
+
 ## Library
 
 ```python
 from doc2md import convert
 
 convert("input.pdf", "output.md")
+convert("report.docx", "report.md", extract_images=True)  # PNGs → report_images/
 convert("ballot.pdf", "ballot.md", ocr_langs=["eng", "tam"])
 convert("spec.pdf", "spec.md", extract_images=True)
 convert("big.pdf", "big.md", chunk_size=50)            # auto-chunk

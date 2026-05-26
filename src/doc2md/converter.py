@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -9,6 +10,7 @@ from typing import Iterable, Optional, Tuple
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions, TesseractCliOcrOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling_core.types.doc import ImageRefMode
 
 
 _TESSERACT_COMMON_PATHS = [
@@ -31,6 +33,31 @@ def _find_tesseract() -> Optional[str]:
     return None
 
 
+_LIBREOFFICE_COMMON_PATHS = [
+    r"C:\Program Files\LibreOffice\program\soffice.exe",
+    r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+    "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+    "/usr/bin/soffice",
+    "/usr/bin/libreoffice",
+    "/usr/local/bin/soffice",
+    "/opt/homebrew/bin/soffice",
+]
+
+
+def _ensure_libreoffice_on_path() -> None:
+    """Docling's DOCX backend needs `libreoffice` or `soffice` on PATH to render
+    DrawingML charts. It looks them up via shutil.which only — no config hook —
+    so we prepend the install directory to PATH if we can find it elsewhere.
+    Without this, native Word charts are silently dropped from the markdown."""
+    if shutil.which("libreoffice") or shutil.which("soffice"):
+        return
+    for candidate in _LIBREOFFICE_COMMON_PATHS:
+        if Path(candidate).exists():
+            install_dir = str(Path(candidate).parent)
+            os.environ["PATH"] = install_dir + os.pathsep + os.environ.get("PATH", "")
+            return
+
+
 def _pdf_page_count(source: str) -> int:
     """Return the number of pages in a PDF (using pypdfium2 — ships with Docling)."""
     import pypdfium2 as pdfium
@@ -48,11 +75,20 @@ def _convert_single(
     ocr_langs: Optional[Iterable[str]],
     extract_images: bool,
     page_range: Optional[Tuple[int, int]],
+    image_artifacts_dir: Optional[Path] = None,
 ) -> Path:
     """Run Docling once on the given source. Used for small docs directly and
-    invoked via `_worker.py` in a subprocess for individual chunks."""
+    invoked via `_worker.py` in a subprocess for individual chunks.
+
+    image_artifacts_dir: if set (and extract_images is True), save extracted
+                        images as PNG files in this directory and reference
+                        them from the markdown. When None, images appear as
+                        `<!-- image -->` placeholders.
+    """
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    _ensure_libreoffice_on_path()
 
     pipeline = PdfPipelineOptions()
     if extract_images:
@@ -84,8 +120,15 @@ def _convert_single(
         convert_kwargs["page_range"] = page_range
 
     result = converter.convert(str(source), **convert_kwargs)
-    markdown = result.document.export_to_markdown()
-    output_path.write_text(markdown, encoding="utf-8")
+    if extract_images and image_artifacts_dir is not None:
+        result.document.save_as_markdown(
+            output_path,
+            artifacts_dir=image_artifacts_dir,
+            image_mode=ImageRefMode.REFERENCED,
+        )
+    else:
+        markdown = result.document.export_to_markdown()
+        output_path.write_text(markdown, encoding="utf-8")
     return output_path
 
 
@@ -171,9 +214,14 @@ def convert(
                     use this when the PDFs already have a text layer. (We
                     skip rather than auto-detect because Docling loads the
                     OCR engine into memory regardless, which spikes RAM.)
-    extract_images: if True, render embedded pictures as PNGs and reference
-                    them in the markdown. Off by default — image extraction
-                    spikes memory and can OOM on large (100+ page) PDFs.
+    extract_images: if True, save embedded pictures as PNGs in a sidecar
+                    `<output_stem>_images/` folder next to the .md and
+                    reference them from the markdown. Off by default —
+                    extraction spikes memory and can OOM on large (100+ page)
+                    PDFs. DOCX-only: rendering Word's native charts (DrawingML)
+                    additionally requires LibreOffice; doc2md auto-finds it in
+                    standard install locations on Windows/macOS/Linux. Chunked
+                    PDF runs (see `chunk_size`) keep placeholder-only output.
     page_range:     (first, last), 1-indexed inclusive. Processes only those
                     pages. Useful for retrying one failed chunk. Mutually
                     exclusive with chunk_size.
@@ -190,8 +238,20 @@ def convert(
     if chunk_size is not None and is_pdf:
         n_pages = _pdf_page_count(source)
         if n_pages > chunk_size:
+            # Chunked mode keeps placeholder behavior — per-chunk image dirs
+            # would be invalidated by the final markdown concatenation.
             return _convert_chunked(
                 source, output, ocr_langs, extract_images, chunk_size, n_pages
             )
 
-    return _convert_single(source, output, ocr_langs, extract_images, page_range)
+    image_artifacts_dir: Optional[Path] = None
+    if extract_images:
+        # Pass a basename only — save_as_markdown joins it with the .md's
+        # parent dir for the disk write and uses this path verbatim in the
+        # markdown image refs. A relative path with extra components would
+        # get nested twice on disk and produce ugly refs.
+        image_artifacts_dir = Path(f"{Path(output).stem}_images")
+
+    return _convert_single(
+        source, output, ocr_langs, extract_images, page_range, image_artifacts_dir
+    )
