@@ -65,6 +65,13 @@ def _convert_single(
         if tesseract_cmd:
             ocr_options.tesseract_cmd = tesseract_cmd
         pipeline.ocr_options = ocr_options
+    else:
+        # Docling defaults do_ocr=True and loads the OCR engine (~300 MB)
+        # even when auto-detection decides not to run it on any page. For
+        # PDFs that already have a text layer this is wasted memory that
+        # contributes to std::bad_alloc on large chunks. Opt out unless
+        # OCR was explicitly requested.
+        pipeline.do_ocr = False
 
     converter = DocumentConverter(
         format_options={
@@ -160,8 +167,10 @@ def convert(
     source:         path or URL to input (PDF, DOCX, PPTX, HTML, image).
     output:         path for the .md file. Parent dirs are created.
     ocr_langs:      e.g. ["eng"] or ["eng", "tam"]. Forces Tesseract OCR with
-                    those languages. Leave as None for Docling auto-detection
-                    (OCR fires only on pages that need it).
+                    those languages. Leave as None to skip OCR entirely —
+                    use this when the PDFs already have a text layer. (We
+                    skip rather than auto-detect because Docling loads the
+                    OCR engine into memory regardless, which spikes RAM.)
     extract_images: if True, render embedded pictures as PNGs and reference
                     them in the markdown. Off by default — image extraction
                     spikes memory and can OOM on large (100+ page) PDFs.

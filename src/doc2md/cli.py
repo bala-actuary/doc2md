@@ -30,7 +30,8 @@ def main(
         "--ocr",
         help=(
             "Comma-separated Tesseract language codes (e.g. 'eng' or 'eng,tam'). "
-            "Forces OCR; omit for Docling auto-detection."
+            "Forces OCR with those languages. Omit to skip OCR — use this for "
+            "PDFs that already have a text layer."
         ),
     ),
     images: bool = typer.Option(
