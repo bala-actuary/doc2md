@@ -22,3 +22,7 @@ notebooks/explore.ipynb
 # Outputs (generated markdown — don't commit)
 outputs/
 !outputs/.gitkeep
+output/
+
+# Editor/tool session state
+.antigravitycli/
