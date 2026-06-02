@@ -41,9 +41,8 @@ def main(
             "Save embedded pictures as PNGs in a sidecar '<output_stem>_images/' "
             "folder next to the .md, referenced from the markdown. Off by "
             "default — extraction spikes memory and can OOM on large (100+ page) "
-            "PDFs. For DOCX, rendering Word's native charts also needs "
-            "LibreOffice; doc2md auto-finds it if installed in a standard "
-            "location."
+            "PDFs. For DOCX, this extracts pasted bitmaps; native Word "
+            "DrawingML charts will be dropped."
         ),
     ),
     pages: Optional[str] = typer.Option(

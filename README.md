@@ -10,10 +10,9 @@ Convert PDFs, Word docs, PowerPoints, HTML, and images to Markdown. Thin wrapper
   - Windows installer: https://github.com/UB-Mannheim/tesseract/wiki
   - During install, tick the language packs you need (e.g. `English`, `Tamil`).
   - `doc2md` auto-finds `tesseract.exe` in the standard install location, so PATH setup is not required.
-- **LibreOffice** — *only* required when converting DOCX files that contain native Word charts/diagrams (DrawingML) and you want them rendered as images via `--images`. Pasted bitmap images extract without it.
-  - Windows: `winget install TheDocumentFoundation.LibreOffice` (~700 MB).
-  - `doc2md` auto-finds `soffice.exe` in the standard install location, so PATH setup is not required.
 - **~5 GB free disk space** for Docling's ML model downloads on first run (PyTorch, transformers, layout models).
+
+> DOCX limitation: `--images` extracts pasted bitmaps but drops Word's native vector charts (DrawingML). Rendering those would need LibreOffice — by design we don't install it. Workaround when you need the chart: open the DOCX in Word and "Save As → PDF" first, then run `doc2md` on the PDF.
 
 ## Get the code
 

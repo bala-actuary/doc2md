@@ -1,5 +1,4 @@
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -33,31 +32,6 @@ def _find_tesseract() -> Optional[str]:
     return None
 
 
-_LIBREOFFICE_COMMON_PATHS = [
-    r"C:\Program Files\LibreOffice\program\soffice.exe",
-    r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
-    "/Applications/LibreOffice.app/Contents/MacOS/soffice",
-    "/usr/bin/soffice",
-    "/usr/bin/libreoffice",
-    "/usr/local/bin/soffice",
-    "/opt/homebrew/bin/soffice",
-]
-
-
-def _ensure_libreoffice_on_path() -> None:
-    """Docling's DOCX backend needs `libreoffice` or `soffice` on PATH to render
-    DrawingML charts. It looks them up via shutil.which only — no config hook —
-    so we prepend the install directory to PATH if we can find it elsewhere.
-    Without this, native Word charts are silently dropped from the markdown."""
-    if shutil.which("libreoffice") or shutil.which("soffice"):
-        return
-    for candidate in _LIBREOFFICE_COMMON_PATHS:
-        if Path(candidate).exists():
-            install_dir = str(Path(candidate).parent)
-            os.environ["PATH"] = install_dir + os.pathsep + os.environ.get("PATH", "")
-            return
-
-
 def _pdf_page_count(source: str) -> int:
     """Return the number of pages in a PDF (using pypdfium2 — ships with Docling)."""
     import pypdfium2 as pdfium
@@ -87,8 +61,6 @@ def _convert_single(
     """
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    _ensure_libreoffice_on_path()
 
     pipeline = PdfPipelineOptions()
     if extract_images:
@@ -218,9 +190,9 @@ def convert(
                     `<output_stem>_images/` folder next to the .md and
                     reference them from the markdown. Off by default —
                     extraction spikes memory and can OOM on large (100+ page)
-                    PDFs. DOCX-only: rendering Word's native charts (DrawingML)
-                    additionally requires LibreOffice; doc2md auto-finds it in
-                    standard install locations on Windows/macOS/Linux. Chunked
+                    PDFs. For DOCX, this extracts pasted bitmaps but drops
+                    Word's native DrawingML charts (rendering those would need
+                    LibreOffice on PATH, which we no longer install). Chunked
                     PDF runs (see `chunk_size`) keep placeholder-only output.
     page_range:     (first, last), 1-indexed inclusive. Processes only those
                     pages. Useful for retrying one failed chunk. Mutually
